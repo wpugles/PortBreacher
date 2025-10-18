@@ -4,7 +4,7 @@
 
 Cansado de esperar por varreduras ```-p-``` completas para só depois descobrir quais serviços rodar? O Port Breacher resolve isso. Ele primeiro descobre rapidamente quais portas estão abertas em todos os alvos e, em seguida, executa uma varredura profunda e detalhada apenas nessas portas.
 
-<img width="882" height="472" alt="image" src="https://github.com/user-attachments/assets/e18d17b2-979b-44c3-9c5f-013ebb7efb54" />
+<img width="882" height="472" alt="Captura de tela de 2025-10-18 13-18-13" src="https://github.com/user-attachments/assets/2f8ace76-f6c5-441c-917f-60224fc0e6ee" />
 
 
 ## ✨ Como Funciona? A Lógica de Duas Fases
