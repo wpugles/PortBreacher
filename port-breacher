@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Script de Varredura Nmap Inteligente em Duas Fases
+Autor: Wil Pugles
+Descrição:
+  - Fase 1: Realiza uma varredura SYN rápida em todas as portas (-p-) de cada host alvo.
+  - Fase 2: Para cada host, pega apenas as portas abertas encontradas e realiza
+    uma varredura detalhada de serviços, SO e vulnerabilidades.
+  - Salva os resultados detalhados em um arquivo único.
+"""
+
+import sys
+import subprocess
+import re
+import os
+import shutil
+from datetime import datetime
+
+# --- Cores para o Terminal ---
+class Cores:
+    VERDE = '\033[92m'
+    AMARELO = '\033[93m'
+    VERMELHO = '\033[91m'
+    AZUL = '\033[94m'
+    FIM = '\033[0m'
+
+# --- Funções Auxiliares ---
+def print_info(message):
+    print(f"{Cores.AZUL}[*] {message}{Cores.FIM}")
+
+def print_success(message):
+    print(f"{Cores.VERDE}[+] {message}{Cores.FIM}")
+
+def print_warning(message):
+    print(f"{Cores.AMARELO}[!] {message}{Cores.FIM}")
+
+def print_error(message):
+    print(f"{Cores.VERMELHO}[-] {message}{Cores.FIM}")
+    sys.exit(1)
+
+def main():
+    # --- Validação Inicial ---
+    if len(sys.argv) < 2:
+        print_error(f"Uso: sudo {sys.argv[0]} <host1,host2,host3...>")
+
+    if os.geteuid() != 0:
+        print_error("Este script precisa ser executado com privilégios de root (sudo) para a varredura SYN (-sS).")
+
+    if not shutil.which('nmap'):
+        print_error("O comando 'nmap' não foi encontrado. Por favor, instale-o. (sudo dnf install nmap)")
+
+    # --- Preparação dos Alvos e Arquivo de Saída ---
+    raw_hosts_input = sys.argv[1]
+    target_hosts = sorted(list(set(raw_hosts_input.replace(',', ' ').split())))
+    
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename_hosts_part = raw_hosts_input.replace('.', '_').replace(',', '-')
+    output_filename = f"Varredura_{filename_hosts_part}_{timestamp}.txt"
+    
+    print_info(f"Alvos da varredura: {', '.join(target_hosts)}")
+    print_info(f"Os resultados serão salvos em: {output_filename}\n")
+
+    # --- Loop Principal de Varredura ---
+    with open(output_filename, 'w', encoding='utf-8') as output_file:
+        output_file.write(f"Relatório de Varredura Nmap para: {', '.join(target_hosts)}\n")
+        output_file.write(f"Gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        output_file.write("="*80 + "\n\n")
+
+        for host in target_hosts:
+            try:
+                # --- Fase 1: Encontrar portas abertas ---
+                print_info(f"Iniciando Fase 1 (descoberta de portas) em: {host}")
+                cmd_fase1 = ["nmap", "-sS", "-p-", "-T4", "--open", "-oG", "-", host]
+                res_fase1 = subprocess.run(cmd_fase1, capture_output=True, text=True, check=True, encoding='utf-8')
+                
+                open_ports = sorted(list(set(re.findall(r'(\d+)/open', res_fase1.stdout))))
+
+                if not open_ports:
+                    print_warning(f"Nenhuma porta TCP aberta encontrada em {host}. Pulando para o próximo alvo.")
+                    output_file.write(f"--- Host: {host} ---\nNenhuma porta TCP aberta encontrada.\n\n")
+                    continue
+
+                port_string = ",".join(open_ports)
+                print_success(f"Portas abertas encontradas em {host}: {port_string}")
+
+                # --- Fase 2: Varredura detalhada ---
+                print_info(f"Iniciando Fase 2 (varredura detalhada) em {host} nas portas: {port_string}")
+                cmd_fase2 = ["nmap", "-sV", "-A", "--script", "vuln", "-p", port_string, host]
+                res_fase2 = subprocess.run(cmd_fase2, capture_output=True, text=True, check=True, encoding='utf-8')
+
+                # Escrever resultado no arquivo
+                output_file.write(f"--- Host: {host} ---\n")
+                output_file.write(res_fase2.stdout)
+                output_file.write("\n" + "="*80 + "\n\n")
+                print_success(f"Varredura detalhada de {host} concluída.")
+
+            except subprocess.CalledProcessError as e:
+                print_warning(f"O Nmap encontrou um erro ao escanear {host}. Verifique o log de saída.")
+                output_file.write(f"--- Host: {host} ---\nERRO DURANTE A VARREDURA:\n{e.stderr}\n\n")
+            except Exception as e:
+                 print_error(f"Um erro inesperado ocorreu com {host}: {e}")
+
+    print_success(f"Varredura concluída! Relatório salvo em '{output_filename}'.")
+
+
+if __name__ == "__main__":
+    main()
