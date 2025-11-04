@@ -62,7 +62,7 @@ A instalação é projetada para ser simples e direta. O pacote inclui um script
 
 3. Execute o instalador com privilégios de root:
 
-        sudo ./install.sh
+        sudo bash install.sh
 
 O script irá verificar as dependências, copiar o ```port-breacher``` para ```/usr/local/bin``` e dar as permissões necessárias. Após a conclusão, o comando estará disponível globalmente no seu terminal.
 
@@ -104,6 +104,6 @@ Navegue até a pasta do projeto que você clonou.
 
 Execute o script de desinstalação com sudo:
 
-    sudo ./uninstall.sh
+    sudo bash uninstall.sh
 
 Isso removerá o executável de ```/usr/local/bin``` de forma limpa.
